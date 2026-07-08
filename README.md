@@ -1,7 +1,5 @@
 # STM32F411 Sensor Telemetry Board — Firmware
 
-![STM32F411 Sensor Telemetry Board](docs/img/board-angled.png)
-
 Bare-metal C (no HAL, direct CMSIS) + FreeRTOS firmware for a custom **4-layer** STM32F411RET6
 sensor telemetry board. A BME280 environmental sensor and a 128×64 **SSD1306 OLED** share one
 400 kHz I²C bus, arbitrated by a FreeRTOS mutex. Sensor readings are framed with a CRC-16/CCITT
