@@ -20,8 +20,8 @@ Custom 4-layer PCB designed in KiCad 9 (stackup: F.Cu / inner GND / inner +3V3 /
 ## Status
 
 Design complete and DFM-validated (POFV across all vias); Gerbers, BOM, and CPL
-can be regenerated from this project for a JLCPCB PCBA order. The board has not
-been fabricated yet (see the top-level README for honest status).
+can be regenerated from this project for a JLCPCB PCBA order. The board is in shipping 
+and will be brought up soon (see the top-level README for status).
 
 To export fabrication files: open the project in KiCad and run the Fabrication
 Toolkit plugin, or export Gerbers / drill / BOM / CPL manually from the PCB and
