@@ -166,3 +166,52 @@ int i2c_read_regs(uint8_t addr7, uint8_t start_reg, uint8_t *buf, uint32_t n)
     (void)tmp;
     return 0;
 }
+
+/* ===== OLED write helpers + bus recovery (added for the 4-task build) ===== */
+/* i2c.c — write a control/register byte, then N payload bytes, in one transaction. */
+int i2c_write_buf(uint8_t addr7, uint8_t first, const uint8_t *buf, uint32_t n)
+{
+ WAIT_IDLE();
+ I2C1->CR1 |= I2C_CR1_START;
+ WAIT(I2C1->SR1 & I2C_SR1_SB);
+ I2C1->DR = (uint8_t)((addr7 << 1) | 0);
+ WAIT_ADDR();
+ (void)I2C1->SR1; (void)I2C1->SR2; /* clear ADDR (SR1 then SR2) */
+ WAIT(I2C1->SR1 & I2C_SR1_TXE);
+ I2C1->DR = first; /* the control byte (0x00 or 0x40) */
+ for (uint32_t i = 0; i < n; i++) {
+ WAIT(I2C1->SR1 & I2C_SR1_TXE);
+ I2C1->DR = buf[i];
+ }
+ WAIT(I2C1->SR1 & I2C_SR1_BTF);
+ I2C1->CR1 |= I2C_CR1_STOP;
+ return 0;
+}
+int i2c_write_reg(uint8_t a,uint8_t ctrl,uint8_t v){return i2c_write_buf(a,ctrl,&v,1);}
+
+/* Call when an I2C transfer times out. PB8 = SCL, PB9 = SDA. */
+void i2c_bus_recovery(void)
+{
+ I2C1->CR1 &= ~I2C_CR1_PE; /* disable the peripheral */
+ RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
+ /* PB8/PB9 -> open-drain GPIO outputs with pull-ups */
+ GPIOB->MODER = (GPIOB->MODER & ~((3U<<16)|(3U<<18))) | (1U<<16)|(1U<<18);
+ GPIOB->OTYPER |= (1U<<8)|(1U<<9);
+ GPIOB->PUPDR = (GPIOB->PUPDR & ~((3U<<16)|(3U<<18))) | (1U<<16)|(1U<<18);
+ GPIOB->BSRR = (1U<<8)|(1U<<9); /* SCL, SDA released high */
+ for (int i = 0; i < 9; i++) { /* <=9 clocks frees a slave */
+ GPIOB->BSRR = (1U<<(8+16)); /* SCL low */
+ for (volatile int d = 0; d < 500; d++) { }
+ GPIOB->BSRR = (1U<<8); /* SCL high */
+ for (volatile int d = 0; d < 500; d++) { }
+ if (GPIOB->IDR & (1U<<9)) break; /* SDA released -> done */
+ }
+ GPIOB->BSRR = (1U<<(9+16)); /* manual STOP: SDA low... */
+ for (volatile int d = 0; d < 500; d++) { }
+ GPIOB->BSRR = (1U<<9); /* ...then SDA high */
+ for (volatile int d = 0; d < 500; d++) { }
+ GPIOB->MODER = (GPIOB->MODER & ~((3U<<16)|(3U<<18))) | (2U<<16)|(2U<<18); /* back to AF */
+ I2C1->CR1 |= I2C_CR1_SWRST; /* force peripheral reset */
+ I2C1->CR1 &= ~I2C_CR1_SWRST;
+ i2c1_init(); /* your section 11.3 init */
+}
