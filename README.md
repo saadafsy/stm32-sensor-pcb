@@ -4,7 +4,7 @@ Bare-metal C (no HAL, direct CMSIS) + FreeRTOS firmware for a custom **4-layer**
 sensor telemetry board. A BME280 environmental sensor and a 128×64 **SSD1306 OLED** share one
 400 kHz I²C bus, arbitrated by a FreeRTOS mutex. Sensor readings are framed with a CRC-16/CCITT
 protocol and streamed at 921600 baud over a CP2102N USB-UART bridge to a Python visualizer.
-
+![STM32F411 Sensor Telemetry Board](docs/img/board-angled.png)
 ## Architecture — four FreeRTOS tasks
 - **sensor_task** — reads + Bosch-compensates the BME280 over I²C, pushes samples to a queue
 - **telemetry_task** — builds the CRC-framed binary packet and sends it under a UART mutex
